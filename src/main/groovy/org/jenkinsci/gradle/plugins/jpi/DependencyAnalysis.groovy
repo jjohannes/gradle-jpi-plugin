@@ -76,8 +76,10 @@ class DependencyAnalysis {
         configurations.resolvablePlugins.incoming.resolutionResult.root.dependencies.each { DependencyResult result ->
             def selected = getSelectedComponent(result, processedComponents)
             selected?.variants?.each { variant ->
-                if (variant.attributes.getAttribute(CATEGORY_ATTRIBUTE) != Category.LIBRARY
-                        || variant.attributes.getAttribute(LIBRARY_ELEMENTS_ATTRIBUTE) != JpiPlugin.JPI) {
+                def attributes = variant.attributes
+                if (attributes.getAttribute(JpiVariantRule.EMPTY_VARIANT) == Boolean.TRUE
+                        || attributes.getAttribute(CATEGORY_ATTRIBUTE) != Category.LIBRARY
+                        || attributes.getAttribute(LIBRARY_ELEMENTS_ATTRIBUTE) != JpiPlugin.JPI) {
                     // Skip dependencies that are not libraries with JPI files.
                     // We request these in the setup in JpiPlugin.configureConfigurations().
                     // However, an individual dependency can override attributes, for example 'category=platform'.

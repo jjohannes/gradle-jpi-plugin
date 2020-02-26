@@ -370,7 +370,7 @@ class JpiIntegrationSpec extends IntegrationSpec {
             }
             jenkinsPlugin {
                 configurePublishing = false
-            }            
+            }
             repositories {
                 ivy {
                     name 'EmbeddedIvy'

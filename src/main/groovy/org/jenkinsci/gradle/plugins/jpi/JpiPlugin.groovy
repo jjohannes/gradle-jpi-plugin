@@ -19,9 +19,13 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.attributes.AttributeCompatibilityRule
+import org.gradle.api.attributes.AttributeDisambiguationRule
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.CompatibilityCheckDetails
 import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.MultipleCandidatesDetails
 import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.java.TargetJvmVersion
 import org.gradle.api.component.AdhocComponentWithVariants
@@ -263,7 +267,40 @@ class JpiPlugin implements Plugin<Project> {
         }
     }
 
+    private static class JPILibraryElementsCompatibilityRule implements
+            AttributeCompatibilityRule<LibraryElements> {
+
+        @Override
+        void execute(CompatibilityCheckDetails<LibraryElements> details) {
+            if (details.consumerValue.name == JPI && details.producerValue.name == LibraryElements.JAR) {
+                // accept JARs for libraries that do not have JPIs so that we do not fail.
+                // Non-JPI files will be filtered out later if needed (e.g. by the TestDependenciesTask)
+                details.compatible()
+            }
+        }
+    }
+
+    private static class JPILibraryDisambiguationRule implements
+            AttributeDisambiguationRule<LibraryElements> {
+
+        @Override
+        void execute(MultipleCandidatesDetails<LibraryElements> details) {
+            if (details.consumerValue.name == JPI) {
+                details.candidateValues.each {
+                    if (it.name == JPI) {
+                        details.closestMatch(it)
+                    }
+                }
+            }
+        }
+    }
+
     private static configureConfigurations(Project project) {
+        def libraryElementsStrategy =
+                project.dependencies.attributesSchema.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
+        libraryElementsStrategy.compatibilityRules.add(JPILibraryElementsCompatibilityRule)
+        libraryElementsStrategy.disambiguationRules.add(JPILibraryDisambiguationRule)
+
         project.dependencies.components.all(JpiVariantRule)
         project.dependencies.components.withModule(JenkinsWarRule.JENKINS_WAR_COORDINATES, JenkinsWarRule)
 
